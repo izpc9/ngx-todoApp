@@ -1,0 +1,48 @@
+<div class="container">
+  <div class="inner-container">
+    <h1>{{ mySide.side }}</h1>
+    <div class="todo-list-container">
+      <header class="header">
+        <input #newTodo class="new-todo" placeholder="What needs to be done?" type="text" (keyup.enter)="addTask()">
+      </header>
+
+      <!-- todo rows -->
+      <section cdkDropList id="{{mySide.side}}" cdkDropListConnectedTo="{{otherSide.side}}"
+        (cdkDropListDropped)="drop($event)">
+        <div *ngIf="todoList.length" (click)="toggleAllTasks()" [ngClass]="allTasksCompleted() ? 'completed' : ''"
+          class="toggle-all"></div>
+        <ul #todoListUl class="todo-list">
+          <li cdkDrag [ngClass]="[todo.completed ? 'completed' : '', todo.editing ? 'editing' : '']"
+            *ngFor="let todo of displayedTodoLists; let i = index;">
+            <div class="toggle-complete" *ngIf="!todo.editing" (click)="toggleCompletedTask(i)"></div>
+            <label (dblclick)="edit(i)" class="view">{{todo.name}}</label>
+            <input id="myInput{{i}}_{{id}}" [autofocus]="true" class="edit" name="inputfield{{i}}" type="text"
+              [(ngModel)]="todo.name" (keyup.enter)="finishedEditing($event, i)">
+
+            <button class="destroy" *ngIf="!todo.editing" (click)="removeTask(i)"></button>
+            <button class="move-task" (click)="moveTaskEvent(todo)">Move</button>
+          </li>
+        </ul>
+      </section>
+
+      <footer *ngIf="todoList.length">
+        <div class="info">
+          {{ remainingTasks == 1 ? '1 item left' : remainingTasks + ' items left' }}
+        </div>
+
+        <div class="filters">
+          <a [ngClass]="view == 'all' ? 'selected' : ''" (click)="view = 'all'; showAllTodos();">All</a>
+          <span style="display: block; width: 3.9px; height: 100%"></span>
+          <a [ngClass]="view == 'active' ? 'selected' : ''" (click)="view = 'active'; showActiveTodos();">Active</a>
+          <span style="display: block; width: 3.9px; height: 100%"></span>
+          <a [ngClass]="view == 'completed' ? 'selected' : ''"
+            (click)="view = 'completed'; showCompletedTodos();">Completed</a>
+        </div>
+
+        <button *ngIf="remainingTasks !== todoList.length" class="clear-completed" (click)="clearCompletedTasks()">Clear
+          completed</button>
+      </footer>
+    </div>
+  </div>
+
+</div>
