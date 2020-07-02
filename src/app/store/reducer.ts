@@ -1,4 +1,4 @@
-import { Task } from "../todo-list/todo-list.component";
+import { Task } from "../models/task.model";
 import { TodoActions, TodoActionTypes } from "./actions";
 
 export interface MainState {
@@ -126,10 +126,8 @@ export function reducer(state = initialState, action: TodoActions): MainState {
             let updatedState = JSON.parse(JSON.stringify(state));
 
             let tmp = { ...updatedState[onSide][action.payload.fromIndex] };
-            let el2 = updatedState[onSide][action.payload.currentIndex];
-
-            updatedState[onSide][action.payload.fromIndex] = el2;
-            updatedState[onSide][action.payload.currentIndex] = tmp;
+            updatedState[onSide].splice(action.payload.fromIndex, 1);
+            updatedState[onSide].splice(action.payload.currentIndex, 0, tmp);
 
             return {
                 leftTodo: updatedState.leftTodo,

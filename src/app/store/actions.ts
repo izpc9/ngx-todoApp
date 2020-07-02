@@ -1,5 +1,5 @@
 import { Action } from '@ngrx/store';
-import { Task } from "../todo-list/todo-list.component";
+import { Task } from "../models/task.model";
 import { TodoListSide } from '../models/todoListSide.model';
 import { MainState } from './reducer';
 

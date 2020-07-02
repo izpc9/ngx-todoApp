@@ -1,23 +1,13 @@
-import { Component, ViewChild, ElementRef, Renderer2, HostListener, OnInit, Input } from '@angular/core';
+import { Component, ViewChild, ElementRef, Renderer2, HostListener, OnInit, Input, } from '@angular/core';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import { Store, select } from '@ngrx/store';
-
 import * as fromTodos from "../store";
+
 import { TodoListSide } from '../models/todoListSide.model';
+import { Task } from '../models/task.model';
 
-export class Task {
-  public completed;
-  public editing;
-  public timestamp;
-
-  constructor(public name: string) {
-    this.name = name;
-    this.completed = false;
-    this.editing = false;
-    this.timestamp = new Date();
-  }
-}
+import { FormGroup, FormBuilder, FormArray } from '@angular/forms';
 
 @Component({
   selector: 'app-todo-list',
@@ -26,7 +16,6 @@ export class Task {
 })
 export class TodoListComponent implements OnInit {
   @ViewChild("newTodo") newTodo: ElementRef;
-  @ViewChild("todoListUl") todoListUl: ElementRef;
 
   public todoList: Task[];
 
@@ -42,47 +31,98 @@ export class TodoListComponent implements OnInit {
   public displayedTodoLists: Task[] = [];
   public remainingTasks = 0;
   public taskEditIndex = null;
+  public taskEditName = null;
   public view = "all";
 
   @HostListener('document:click', ['$event'])
   public onClick(event) {
     if (event.srcElement.attributes.class && !event.srcElement.classList.contains("edit")) {
-      if ((this.taskEditIndex != null || this.taskEditIndex != undefined) && this.taskEditIndex < this.todoList.length) {
-        this._store.dispatch(new fromTodos.EditTask({ newName: this.todoList[this.taskEditIndex].name, index: this.taskEditIndex, todoListSide: this.mySide })); // TODO ng model
+      if ((this.taskEditIndex != null || this.taskEditIndex != undefined) &&
+        this.taskEditIndex < this.todoList.length &&
+        (this.taskEditName != null || this.taskEditName != undefined)) {
+
+        // console.log(this.taskEditIndex, this.taskEditName);
+        this._store.dispatch(new fromTodos.EditTask(
+          {
+            newName: this.taskEditName,
+            index: this.taskEditIndex,
+            todoListSide: this.mySide
+          }));
+
         this.taskEditIndex = null;
+        this.taskEditName = null;
       }
     }
   }
 
-  constructor(private renderer2: Renderer2, private _store: Store<fromTodos.MainState>) { }
+  @HostListener("window:beforeunload", ["$event"])
+  unloadHandler(event: Event) {
+    if (this.taskEditIndex != null) {
+      this._store.dispatch(new fromTodos.ToggleTaskEditing({ index: this.taskEditIndex, todoListSide: this.mySide }));
+    }
+  }
+
+  tasksForm: FormGroup;
+
+  constructor(private renderer2: Renderer2,
+    private _store: Store<fromTodos.MainState>,
+    private formBuilder: FormBuilder) { }
 
   ngOnInit(): void {
-    if (this.mySide.side == "leftTodo") {
-      const todoList$ = this._store.pipe(select(fromTodos.getLeftTodoList));
-      todoList$.subscribe((todoList: Task[]) => {
-        // this.todoList = res;
-        this.todoList = JSON.parse(JSON.stringify(todoList)); // TODO ng model
-        this.updateTodosView();
-        localStorage.setItem(this.mySide.side, JSON.stringify(todoList));
-      })
-    } else {
-      const todoList$ = this._store.pipe(select(fromTodos.getRightTodoList));
-      todoList$.subscribe((todoList: Task[]) => {
-        // this.todoList = res;
-        this.todoList = JSON.parse(JSON.stringify(todoList)); // TODO ng model
-        this.updateTodosView();
-        localStorage.setItem(this.mySide.side, JSON.stringify(todoList));
-      })
-    }
+    this.tasksForm = this.formBuilder.group({
+      tasks: this.formBuilder.array([])
+    });
 
+    this.tasksForm.valueChanges.subscribe((form) => {
+      // console.log("value changes");
+      if (this.taskEditIndex != null || this.taskEditIndex != undefined) {
+        if (form.tasks.length > this.taskEditIndex) {
+          this.taskEditName = form.tasks[this.taskEditIndex].name;
+        }
+      }
+    });
+
+    const todoList$ = this._store.pipe(select(fromTodos[this.mySide.side]));
+    todoList$.subscribe((todoList: Task[]) => {
+      this.todoList = todoList;
+
+      this.updateTodosView();
+      localStorage.setItem(this.mySide.side, JSON.stringify(todoList));
+    })
+  }
+
+  emptyFormArray() {
+    let arr = <FormArray>this.tasksForm.controls.tasks;
+    arr.controls = [];
+  }
+
+  addTaskToForm(task: Task) {
+    (this.tasksForm.get("tasks") as FormArray).push(this.formBuilder.group({
+      name: task.name,
+      completed: task.completed,
+      editing: task.editing,
+      timestamp: task.timestamp
+    }));
   }
 
   moveTaskEvent(task: Task) {
     this._store.dispatch(new fromTodos.MoveTask(
-      { 
-        index: this.todoList.indexOf(task), 
-        todoListSide: this.mySide, 
-        sendToSide: this.otherSide.side }));
+      {
+        index: this.myIndexOf(task),
+        todoListSide: this.mySide,
+        sendToSide: this.otherSide.side
+      }));
+  }
+
+  myIndexOf(task: Task) {
+    for (var i = 0; i < this.todoList.length; i++) {
+      if (this.todoList[i].name == task.name && this.todoList[i].timestamp == task.timestamp &&
+        this.todoList[i].editing == task.editing && this.todoList[i].completed == task.completed
+      ) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   addTask() {
@@ -103,7 +143,7 @@ export class TodoListComponent implements OnInit {
   }
 
   finishedEditing(e, index) {
-    this._store.dispatch(new fromTodos.EditTask({ newName: e.srcElement.value, index, todoListSide: this.mySide })); // TODO ng model
+    this._store.dispatch(new fromTodos.EditTask({ newName: e.srcElement.value, index, todoListSide: this.mySide }));
   }
 
   toggleAllTasks() {
@@ -164,18 +204,33 @@ export class TodoListComponent implements OnInit {
 
   showAllTodos() {
     this.displayedTodoLists = this.todoList;
+
+    this.emptyFormArray();
+    for (let i = 0; i < this.displayedTodoLists.length; i++) {
+      this.addTaskToForm(this.displayedTodoLists[i]);
+    }
   }
 
   showActiveTodos() {
     this.displayedTodoLists = this.todoList.filter(task => {
       return !task.completed;
     });
+
+    this.emptyFormArray();
+    for (let i = 0; i < this.displayedTodoLists.length; i++) {
+      this.addTaskToForm(this.displayedTodoLists[i]);
+    }
   }
 
   showCompletedTodos() {
     this.displayedTodoLists = this.todoList.filter(task => {
       return task.completed;
     });
+
+    this.emptyFormArray();
+    for (let i = 0; i < this.displayedTodoLists.length; i++) {
+      this.addTaskToForm(this.displayedTodoLists[i]);
+    }
   }
 
   drop(event: CdkDragDrop<string[]>) {

@@ -7,10 +7,10 @@ export const getAllTodoLists = createSelector(getMainState, (state: MainState) =
     return state;
 });
 
-export const getLeftTodoList = createSelector(getMainState, (state: MainState) => {
+export const leftTodo = createSelector(getMainState, (state: MainState) => {
     return state.leftTodo;
 });
 
-export const getRightTodoList = createSelector(getMainState, (state: MainState) => {
+export const rightTodo = createSelector(getMainState, (state: MainState) => {
     return state.rightTodo;
 });

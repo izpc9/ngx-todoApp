@@ -11,18 +11,22 @@
         (cdkDropListDropped)="drop($event)">
         <div *ngIf="todoList.length" (click)="toggleAllTasks()" [ngClass]="allTasksCompleted() ? 'completed' : ''"
           class="toggle-all"></div>
-        <ul #todoListUl class="todo-list">
-          <li cdkDrag [ngClass]="[todo.completed ? 'completed' : '', todo.editing ? 'editing' : '']"
-            *ngFor="let todo of displayedTodoLists; let i = index;">
-            <div class="toggle-complete" *ngIf="!todo.editing" (click)="toggleCompletedTask(i)"></div>
-            <label (dblclick)="edit(i)" class="view">{{todo.name}}</label>
-            <input id="myInput{{i}}_{{id}}" [autofocus]="true" class="edit" name="inputfield{{i}}" type="text"
-              [(ngModel)]="todo.name" (keyup.enter)="finishedEditing($event, i)">
+        <form *ngIf="tasksForm.get('tasks')" [formGroup]="tasksForm">
+          <ul #todoListUl class="todo-list" formArrayName="tasks">
+            <li cdkDrag
+              [ngClass]="[todo.controls.completed.value ? 'completed' : '', todo.controls.editing.value ? 'editing' : '']"
+              *ngFor="let todo of tasksForm.get('tasks').controls; let i = index;" [formGroupName]="i">
+              <div class="toggle-complete" *ngIf="!todo.controls.editing.value" (click)="toggleCompletedTask(i)"></div>
+              <label (dblclick)="edit(i)" class="view">{{todo.controls.name.value}}</label>
+              <input value="{{todo.controls.name.value}}" id="myInput{{i}}_{{id}}" [autofocus]="true" class="edit"
+                name="inputfield{{i}}" type="text" formControlName="name" (keyup.enter)="finishedEditing($event, i)">
 
-            <button class="destroy" *ngIf="!todo.editing" (click)="removeTask(i)"></button>
-            <button class="move-task" (click)="moveTaskEvent(todo)">Move</button>
-          </li>
-        </ul>
+              <button type="button" class="destroy" *ngIf="!todo.controls.editing.value"
+                (click)="removeTask(i)"></button>
+              <button type="button" class="move-task" (click)="moveTaskEvent(todo.value)">Move</button>
+            </li>
+          </ul>
+        </form>
       </section>
 
       <footer *ngIf="todoList.length">
